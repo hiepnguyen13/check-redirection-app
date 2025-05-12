@@ -16,6 +16,7 @@ function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [results, setResults] = useState<ResultRow[]>([]);
+  const [selectedEnv, setSelectedEnv] = useState(0);
 
   const openAllLinks = () => {
     if (inputRef.current) {
@@ -29,8 +30,16 @@ function App() {
           url = `https://${link}`;
         }
         try {
-          new URL(url);
-          window.open(url, "_blank", "noopener,noreferrer");
+          const parsedUrl = new URL(url);
+          let finalUrl = url;
+          if (selectedEnv === 1) {
+            // For Cambodia, replace protocol and domain
+            parsedUrl.protocol = "https:";
+            parsedUrl.hostname =
+              "apac-chopper-web-kh-prod.ig1.chopper-prod.apac-chopper-core-prod-90ju.decathlon.io";
+            finalUrl = parsedUrl.toString();
+          }
+          window.open(finalUrl, "_blank", "noopener,noreferrer");
         } catch (e) {
           console.error(e);
           console.warn(`Invalid URL: ${link}`);
@@ -63,15 +72,27 @@ function App() {
       }
 
       const outputText = outputRef.current.value.trim();
-      const outputLines = outputText
+      const originalOutputLines = outputText
         .split("\n")
         .map((line) => line.trim())
         .filter((line) => line !== "")
         .map((line) => decodeURIComponent(line));
 
-      if (outputLines.length === 0) {
+      if (originalOutputLines.length === 0) {
         setError("All recommended URLs textarea is empty");
         return;
+      }
+
+      let outputLines = [...originalOutputLines];
+      if (selectedEnv === 1) {
+        outputLines = outputLines.map((line) => {
+          const parsedUrl = new URL(line);
+          parsedUrl.protocol = "https:";
+          parsedUrl.hostname =
+            "apac-chopper-web-kh-prod.ig1.chopper-prod.apac-chopper-core-prod-90ju.decathlon.io";
+          const modifiedUrl = parsedUrl.toString();
+          return modifiedUrl;
+        });
       }
 
       const resultRows: ResultRow[] = [];
@@ -80,15 +101,28 @@ function App() {
 
       for (let i = 0; i < inputLines.length; i++) {
         let url = inputLines[i];
+        let displayUrl = url; // Original URL for table
         if (!/^https?:\/\//i.test(url)) {
           url = `https://${url}`;
+          displayUrl = url;
+        }
+
+        if (selectedEnv === 1) {
+          const parsedUrl = new URL(url);
+          parsedUrl.protocol = "https:";
+          parsedUrl.hostname =
+            "apac-chopper-web-kh-prod.ig1.chopper-prod.apac-chopper-core-prod-90ju.decathlon.io";
+          url = parsedUrl.toString();
         }
 
         let status = "success";
         let existingUrlError = "";
         let recommendedUrlError = "";
         let finalUrl = "";
-        const recommendedUrl = outputLines[i] || "(no recommended URL)";
+        const recommendedUrl =
+          decodeURIComponent(outputLines[i]) || "(no recommended URL)";
+        const displayRecommendedUrl =
+          originalOutputLines[i] || "(no recommended URL)";
 
         try {
           new URL(url);
@@ -120,8 +154,8 @@ function App() {
 
         resultRows.push({
           line: i + 1,
-          existingUrl: url,
-          recommendedUrl,
+          existingUrl: displayUrl,
+          recommendedUrl: displayRecommendedUrl,
           existingUrlError,
           recommendedUrlError,
           status,
@@ -138,11 +172,11 @@ function App() {
               ? inputLines[outputLines.length] || ""
               : "",
           recommendedUrl:
-            outputLines.length > inputLines.length
-              ? outputLines[inputLines.length] || ""
+            originalOutputLines.length > inputLines.length
+              ? originalOutputLines[inputLines.length] || ""
               : "",
           existingUrlError: "",
-          recommendedUrlError: `Length mismatch: ${inputLines.length} existing URLs vs ${outputLines.length} recommended URLs`,
+          recommendedUrlError: `Length mismatch: ${inputLines.length} existing URLs vs ${originalOutputLines.length} recommended URLs`,
           status: "error",
         });
       }
@@ -157,7 +191,43 @@ function App() {
     <div className="container py-5">
       <h1 className="pb-3">Check redirection app</h1>
 
-      <div className="container d-flex gap-3">
+      <div className="container">
+        <label htmlFor="env" className="form-label h4">
+          Select Env
+        </label>
+        <div className="d-flex gap-3">
+          <div className="form-check">
+            <input
+              className="form-check-input"
+              type="radio"
+              name="env"
+              id="radio-button-env-prod"
+              value={0}
+              checked={selectedEnv === 0}
+              onChange={() => setSelectedEnv(0)}
+            />
+            <label className="form-check-label" htmlFor="radio-button-env-prod">
+              Prod
+            </label>
+          </div>
+          <div className="form-check">
+            <input
+              className="form-check-input"
+              type="radio"
+              name="env"
+              id="radio-button-env-kh"
+              value={1}
+              checked={selectedEnv === 1}
+              onChange={() => setSelectedEnv(1)}
+            />
+            <label className="form-check-label" htmlFor="radio-button-env-kh">
+              Cambodia
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="container d-flex gap-3 mt-3">
         <div className="flex-grow-1 w-50">
           <div className="mb-3">
             <label htmlFor="input-links" className="form-label h4">
@@ -200,7 +270,7 @@ function App() {
         </div>
       </div>
 
-      <div className="container mt-5">
+      <div className="container mt-3">
         {isLoading || error || results.length ? (
           <p className="h4">Results</p>
         ) : null}
