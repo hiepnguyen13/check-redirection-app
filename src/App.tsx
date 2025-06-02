@@ -16,7 +16,6 @@ function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [results, setResults] = useState<ResultRow[]>([]);
-  const [selectedEnv, setSelectedEnv] = useState(0);
 
   const openAllLinks = () => {
     if (inputRef.current) {
@@ -30,15 +29,7 @@ function App() {
           url = `https://${link}`;
         }
         try {
-          const parsedUrl = new URL(url);
-          let finalUrl = url;
-          if (selectedEnv === 1) {
-            // For Cambodia, replace protocol and domain
-            parsedUrl.protocol = "https:";
-            parsedUrl.hostname =
-              "apac-chopper-web-kh-prod.ig1.chopper-prod.apac-chopper-core-prod-90ju.decathlon.io";
-            finalUrl = parsedUrl.toString();
-          }
+          const finalUrl = url;
           window.open(finalUrl, "_blank", "noopener,noreferrer");
         } catch (e) {
           console.error(e);
@@ -83,17 +74,7 @@ function App() {
         return;
       }
 
-      let outputLines = [...originalOutputLines];
-      if (selectedEnv === 1) {
-        outputLines = outputLines.map((line) => {
-          const parsedUrl = new URL(line);
-          parsedUrl.protocol = "https:";
-          parsedUrl.hostname =
-            "apac-chopper-web-kh-prod.ig1.chopper-prod.apac-chopper-core-prod-90ju.decathlon.io";
-          const modifiedUrl = parsedUrl.toString();
-          return modifiedUrl;
-        });
-      }
+      const outputLines = [...originalOutputLines];
 
       const resultRows: ResultRow[] = [];
       const totalUrls = inputLines.length;
@@ -105,14 +86,6 @@ function App() {
         if (!/^https?:\/\//i.test(url)) {
           url = `https://${url}`;
           displayUrl = url;
-        }
-
-        if (selectedEnv === 1) {
-          const parsedUrl = new URL(url);
-          parsedUrl.protocol = "https:";
-          parsedUrl.hostname =
-            "apac-chopper-web-kh-prod.ig1.chopper-prod.apac-chopper-core-prod-90ju.decathlon.io";
-          url = parsedUrl.toString();
         }
 
         let status = "success";
@@ -190,42 +163,6 @@ function App() {
   return (
     <div className="container py-5">
       <h1 className="pb-3">Check redirection app</h1>
-
-      <div className="container">
-        <label htmlFor="env" className="form-label h4">
-          Select Env
-        </label>
-        <div className="d-flex gap-3">
-          <div className="form-check">
-            <input
-              className="form-check-input"
-              type="radio"
-              name="env"
-              id="radio-button-env-prod"
-              value={0}
-              checked={selectedEnv === 0}
-              onChange={() => setSelectedEnv(0)}
-            />
-            <label className="form-check-label" htmlFor="radio-button-env-prod">
-              Prod
-            </label>
-          </div>
-          <div className="form-check">
-            <input
-              className="form-check-input"
-              type="radio"
-              name="env"
-              id="radio-button-env-kh"
-              value={1}
-              checked={selectedEnv === 1}
-              onChange={() => setSelectedEnv(1)}
-            />
-            <label className="form-check-label" htmlFor="radio-button-env-kh">
-              Cambodia
-            </label>
-          </div>
-        </div>
-      </div>
 
       <div className="container d-flex gap-3 mt-3">
         <div className="flex-grow-1 w-50">
